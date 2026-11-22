@@ -31,10 +31,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Récupérer le code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Installer Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -55,10 +55,20 @@ jobs:
               missing=1
             fi
           done
-          # L'URL doit être l'adresse brute (pas un lien copié depuis un texte mis en forme)
-          if [ -n "$VITE_SUPABASE_URL" ] && ! [[ "$VITE_SUPABASE_URL" =~ ^https://[^[:space:]\[\]\(\)]+$ ]]; then
-            echo "::error::VITE_SUPABASE_URL doit être de la forme https://xxxx.supabase.co (sans crochets, parenthèses ni espaces)."
-            missing=1
+          # L'URL doit être l'adresse brute (pas un lien copié depuis un texte mis en forme).
+          # Les espaces / retours à la ligne en début et fin sont tolérés (l'application les retire).
+          url="$(printf '%s' "$VITE_SUPABASE_URL" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          if [ -n "$url" ]; then
+            bad=0
+            case "$url" in https://*) ;; *) bad=1 ;; esac
+            case "$url" in *'['*|*']'*|*'('*|*')'*|*' '*) bad=1 ;; esac
+            if [ "$bad" = 1 ]; then
+              # Diagnostic sans révéler la valeur du secret
+              starts=no;   case "$url" in https://*) starts=yes ;; esac
+              brackets=no; case "$url" in *'['*|*']'*|*'('*|*')'*) brackets=yes ;; esac
+              echo "::error::VITE_SUPABASE_URL doit être de la forme https://xxxx.supabase.co (longueur actuelle : ${#url}, commence par https:// : $starts, contient des crochets ou parenthèses : $brackets)."
+              missing=1
+            fi
           fi
           exit $missing
 
@@ -73,7 +83,7 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Publier le dossier dist
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: dist
 
