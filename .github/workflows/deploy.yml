@@ -1,0 +1,84 @@
+# Compile l'application et la déploie sur GitHub Pages à chaque push sur main.
+#
+# Prérequis (une seule fois, dans le dépôt GitHub) :
+#  - Settings > Pages > Build and deployment > Source : « GitHub Actions »
+#  - Settings > Secrets and variables > Actions > New repository secret :
+#      VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_ADMIN_PIN
+#
+# Rappel : les variables VITE_ sont intégrées au JavaScript publié (site statique).
+# Elles ne sont pas « secrètes » pour les visiteurs du site ; les secrets GitHub
+# servent seulement à ne pas les écrire dans le code source du dépôt.
+
+name: Déploiement GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # permet aussi un déploiement manuel depuis l'onglet Actions
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un seul déploiement à la fois ; un nouveau push annule celui en attente
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Vérifier la présence des secrets
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_ADMIN_PIN: ${{ secrets.VITE_ADMIN_PIN }}
+        run: |
+          missing=0
+          for name in VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY VITE_ADMIN_PIN; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Le secret $name n'est pas défini (Settings > Secrets and variables > Actions)."
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - name: Compiler (TypeScript + Vite)
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_ADMIN_PIN: ${{ secrets.VITE_ADMIN_PIN }}
+        run: npm run build
+
+      - name: Préparer GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Publier le dossier dist
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Déployer sur GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
