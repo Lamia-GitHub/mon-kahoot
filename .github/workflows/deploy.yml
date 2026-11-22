@@ -55,6 +55,11 @@ jobs:
               missing=1
             fi
           done
+          # L'URL doit être l'adresse brute (pas un lien copié depuis un texte mis en forme)
+          if [ -n "$VITE_SUPABASE_URL" ] && ! [[ "$VITE_SUPABASE_URL" =~ ^https://[^[:space:]\[\]\(\)]+$ ]]; then
+            echo "::error::VITE_SUPABASE_URL doit être de la forme https://xxxx.supabase.co (sans crochets, parenthèses ni espaces)."
+            missing=1
+          fi
           exit $missing
 
       - name: Compiler (TypeScript + Vite)
