@@ -11,7 +11,10 @@ Application web de quiz en temps réel (type Kahoot) : un hôte lance une partie
 - **Hébergement statique uniquement** : `npm run build` produit `dist/` déployable tel quel (Netlify, Vercel static, GitHub Pages…).
   - Aucun code serveur, aucune route API, pas de SSR.
   - Toute la logique s'exécute côté client avec la clé `anon` de Supabase ; la sécurité passe par les politiques RLS dans `schema.sql`.
-  - Si un routeur est ajouté, utiliser `HashRouter` (ou équivalent) pour éviter les 404 sur un hébergeur statique.
+  - Routage par fragment d'URL (`src/lib/route.ts`, pas de 404 sur hébergeur statique) :
+    `/` → interface Participant (`src/pages/ParticipantApp.tsx`, uniquement « Rejoindre une partie », aucun lien animateur) ;
+    `#/admin` → interface Animateur (`src/pages/AdminApp.tsx`, code `VITE_ADMIN_PIN` demandé à l'ouverture, chaque écran interne revient à l'espace animateur).
+  - Le QR code du lobby est généré localement (`qrcode.react`) et pointe vers l'URL participant (sans `#/admin`).
   - `vite.config.ts` utilise `base: './'` pour fonctionner dans un sous-dossier.
 
 ## Configuration

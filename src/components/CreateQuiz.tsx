@@ -228,7 +228,7 @@ export default function CreateQuiz({ onBack, quizId }: CreateQuizProps) {
           onClick={onBack}
           className="flex items-center gap-1 rounded-lg px-3 py-2 font-semibold text-gray-600 hover:bg-gray-200"
         >
-          <ArrowLeft className="h-5 w-5" /> Accueil
+          <ArrowLeft className="h-5 w-5" /> Espace animateur
         </button>
       </main>
     )
@@ -265,7 +265,7 @@ export default function CreateQuiz({ onBack, quizId }: CreateQuizProps) {
                   : 'rounded-xl border-2 border-gray-200 py-3 font-bold text-gray-700 hover:bg-gray-50'
               }
             >
-              Retour à l'accueil
+              Retour à l'espace animateur
             </button>
           </div>
         </div>
@@ -283,7 +283,7 @@ export default function CreateQuiz({ onBack, quizId }: CreateQuizProps) {
             className="flex items-center gap-1 rounded-lg px-3 py-2 font-semibold text-gray-600 hover:bg-gray-100"
           >
             <ArrowLeft className="h-5 w-5" />
-            Accueil
+            Espace animateur
           </button>
           {isEdit && (
             <span className="hidden shrink-0 rounded-full bg-amber-100 px-3 py-1 text-sm font-bold text-amber-800 sm:inline">

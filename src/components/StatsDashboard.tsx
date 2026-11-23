@@ -153,7 +153,7 @@ export default function StatsDashboard({ onBack }: StatsDashboardProps) {
             className="flex items-center gap-1 rounded-lg px-3 py-2 font-semibold text-gray-600 hover:bg-gray-100"
           >
             <ArrowLeft className="h-5 w-5" />
-            Accueil
+            Espace animateur
           </button>
           <h1 className="flex-1 text-xl font-black text-gray-900">Statistiques &amp; Analyses</h1>
           <button

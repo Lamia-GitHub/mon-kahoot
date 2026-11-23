@@ -262,7 +262,7 @@ export default function HostGame({ session: initialSession, quizTitle, onExit }:
           className="flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-lg font-black text-violet-700 shadow-[0_5px_0_0_rgba(0,0,0,0.25)] hover:bg-violet-50 active:translate-y-1 active:shadow-none"
         >
           <Home className="h-5 w-5" />
-          Retour à l'accueil
+          Retour à l'espace animateur
         </button>
       </main>
     )

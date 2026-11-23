@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { AlertTriangle, Loader2, Play, Users, Wifi, WifiOff, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { supabaseErrorDetails } from '../lib/errors'
+import { participantUrl } from '../lib/route'
+import { QRCodeSVG } from 'qrcode.react'
 import type { GameSession, Player } from '../types/database'
 
 const CHIP_COLORS = ['bg-red-600', 'bg-blue-600', 'bg-amber-500', 'bg-green-600']
@@ -114,28 +116,44 @@ export default function HostLobby({ session, quizTitle, onExit, onStarted }: Hos
     onExit()
   }
 
-  const joinUrl = `${window.location.origin}${window.location.pathname}`
+  // Adresse publique des participants (sans #/admin) : encodée dans le QR code
+  const joinUrl = participantUrl()
+  const joinUrlLabel = joinUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')
 
   return (
     <main className="flex min-h-screen flex-col bg-gradient-to-br from-violet-800 via-purple-700 to-fuchsia-600 text-white">
-      {/* Bandeau PIN */}
+      {/* Bandeau PIN + QR code d'accès rapide */}
       <header className="bg-white text-gray-900 shadow-xl">
-        <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 px-4 py-6 sm:flex-row sm:justify-between">
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-6 px-4 py-6 sm:flex-row sm:justify-between">
           <div className="text-center sm:text-left">
-            <p className="text-sm font-semibold uppercase tracking-wider text-gray-500">
-              Rejoins sur <span className="normal-case tracking-normal text-violet-700">{joinUrl}</span>
-            </p>
             <p className="text-lg font-bold text-gray-700">{quizTitle}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-sm font-bold uppercase tracking-wider text-gray-500">Code PIN</p>
+            <p className="mt-3 text-sm font-bold uppercase tracking-wider text-gray-500">Code PIN</p>
             <p
               className="font-black leading-none tracking-[0.12em] text-gray-900 text-7xl sm:text-8xl"
               data-testid="game-pin"
             >
               {session.pin}
             </p>
+            <p className="mt-3 text-sm font-semibold text-gray-500">
+              Scanne le QR code ou va sur l'adresse indiquée, puis entre le code PIN.
+            </p>
           </div>
+          <figure className="flex flex-col items-center gap-2">
+            <div className="rounded-2xl border-4 border-violet-600 bg-white p-3 shadow-lg">
+              {/* Généré dans le navigateur : fonctionne sans service externe */}
+              <QRCodeSVG
+                value={joinUrl}
+                size={176}
+                level="M"
+                marginSize={0}
+                title={`QR code vers ${joinUrlLabel}`}
+                data-testid="join-qr"
+              />
+            </div>
+            <figcaption className="max-w-60 break-all text-center text-base font-black text-violet-700" data-testid="join-url">
+              {joinUrlLabel}
+            </figcaption>
+          </figure>
         </div>
       </header>
 
