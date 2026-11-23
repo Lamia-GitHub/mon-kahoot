@@ -6,6 +6,34 @@ import { ANSWER_STYLES, visibleChoices } from '../lib/answerStyles'
 import { ordinal, rankOf, sortByScore } from '../lib/ranking'
 import type { Answer, GameSession, Player, Question } from '../types/database'
 
+// Réponse du joueur pour une question d'une partie donnée (filtre strict, jamais celle d'un autre)
+async function fetchOwnAnswer(sessionId: string, playerId: string, questionId: string): Promise<Answer | null> {
+  const { data } = await supabase
+    .from('answers')
+    .select('*')
+    .eq('session_id', sessionId)
+    .eq('player_id', playerId)
+    .eq('question_id', questionId)
+    .maybeSingle()
+  return data
+}
+
+// Rappel de la réponse enregistrée (forme + couleur), pour que le joueur sache ce qu'il a choisi
+function ChosenAnswer({ choiceIndex }: { choiceIndex: number }) {
+  const style = ANSWER_STYLES[choiceIndex]
+  if (!style) return null
+  const Icon = style.icon
+  return (
+    <p className="flex items-center gap-2 rounded-full bg-black/20 px-4 py-1.5 text-base font-bold" data-testid="chosen-answer">
+      Ta réponse :
+      <span className={`flex h-7 w-7 items-center justify-center rounded-md ${style.bg}`}>
+        <Icon className="h-4 w-4 fill-white text-white" />
+      </span>
+      {style.shape}
+    </p>
+  )
+}
+
 // Le joueur n'a besoin que du nombre de choix : on ne charge ni l'énoncé ni la bonne réponse
 type PlayerQuestion = Pick<Question, 'id' | 'position' | 'choices'>
 
@@ -78,49 +106,54 @@ export default function PlayerGame({ player, session: initialSession, onLeave }:
     if (session.status === 'finished') playerStorage.clear()
   }, [session.status])
 
-  // Question en cours : retrouve une réponse déjà envoyée (ex. après un rafraîchissement de page)
+  // Question en cours : retrouve SA réponse déjà envoyée (ex. après un rafraîchissement de page).
+  // Filtre strict : cette partie + ce joueur + cette question.
   const currentQuestionId = question?.id
   useEffect(() => {
     if (session.status !== 'question' || !currentQuestionId) return
     let cancelled = false
-    void supabase
-      .from('answers')
-      .select('*')
-      .eq('player_id', player.id)
-      .eq('question_id', currentQuestionId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!cancelled && data) setMyAnswers((m) => ({ ...m, [data.question_id]: data }))
-      })
+    void fetchOwnAnswer(session.id, player.id, currentQuestionId).then((answer) => {
+      if (!cancelled && answer) setMyAnswers((m) => ({ ...m, [answer.question_id]: answer }))
+    })
     return () => {
       cancelled = true
     }
-  }, [session.status, currentQuestionId, player.id])
+  }, [session.status, session.id, currentQuestionId, player.id])
 
-  // À l'affichage des résultats / de la fin : récupère le classement et sa propre réponse
+  // Passage en résultats / fin : tout est relu dans Supabase (source de vérité), jamais déduit
+  // de l'état local. Sa réponse (partie + joueur + question) remplace la valeur locale, et le
+  // classement de CETTE partie donne son score total et son rang.
+  // Clé « statut:question » des résultats relus : évite d'afficher ceux de la question précédente
+  const [loadedResultsKey, setLoadedResultsKey] = useState<string | null>(null)
+  const resultsKey = `${session.status}:${currentQuestionId ?? ""}`
+  const resultsLoaded = loadedResultsKey === resultsKey
   useEffect(() => {
     if (session.status !== 'results' && session.status !== 'finished') return
     let cancelled = false
     setRanking(null)
     void (async () => {
-      const { data: players } = await supabase.from('players').select('*').eq('session_id', session.id)
+      const [{ data: players }, answer] = await Promise.all([
+        supabase.from('players').select('*').eq('session_id', session.id),
+        session.status === 'results' && currentQuestionId
+          ? fetchOwnAnswer(session.id, player.id, currentQuestionId)
+          : Promise.resolve(null),
+      ])
       if (cancelled) return
-      setRanking(players ? sortByScore(players) : [])
-
-      if (question && session.status === 'results') {
-        const { data: answer } = await supabase
-          .from('answers')
-          .select('*')
-          .eq('player_id', player.id)
-          .eq('question_id', question.id)
-          .maybeSingle()
-        if (!cancelled && answer) setMyAnswers((m) => ({ ...m, [answer.question_id]: answer }))
+      if (session.status === 'results' && currentQuestionId) {
+        setMyAnswers((m) => {
+          const next = { ...m }
+          if (answer) next[currentQuestionId] = answer
+          else delete next[currentQuestionId]
+          return next
+        })
       }
+      setRanking(players ? sortByScore(players) : [])
+      setLoadedResultsKey(`${session.status}:${currentQuestionId ?? ""}`)
     })()
     return () => {
       cancelled = true
     }
-  }, [session.status, session.id, question, player.id])
+  }, [session.status, session.id, currentQuestionId, player.id])
 
   async function sendAnswer(choiceIndex: number) {
     if (!question || myAnswer || sending) return
@@ -143,7 +176,9 @@ export default function PlayerGame({ player, session: initialSession, onLeave }:
       })
       return
     }
-    setMyAnswers((m) => ({ ...m, [data.question_id]: data }))
+    if (data.player_id === player.id && data.session_id === session.id) {
+      setMyAnswers((m) => ({ ...m, [data.question_id]: data }))
+    }
   }
 
   const me = ranking?.find((p) => p.id === player.id)
@@ -203,6 +238,16 @@ export default function PlayerGame({ player, session: initialSession, onLeave }:
 
   // ------------------------------------------------------------------ Résultats de la question
   if (session.status === 'results') {
+    if (!resultsLoaded) {
+      return (
+        <main className="flex min-h-screen flex-col bg-gradient-to-br from-violet-800 via-purple-700 to-fuchsia-600">
+          {header}
+          <div className="flex flex-1 items-center justify-center text-white">
+            <Loader2 className="h-12 w-12 animate-spin" />
+          </div>
+        </main>
+      )
+    }
     const correct = myAnswer?.is_correct ?? false
     const bg = !myAnswer ? 'from-gray-700 to-gray-800' : correct ? 'from-green-600 to-emerald-700' : 'from-red-600 to-rose-700'
     return (
@@ -222,6 +267,7 @@ export default function PlayerGame({ player, session: initialSession, onLeave }:
           <p className="rounded-full bg-black/20 px-6 py-2 text-2xl font-black">
             +{myAnswer?.points_awarded ?? 0} points
           </p>
+          {myAnswer && <ChosenAnswer choiceIndex={myAnswer.choice_index} />}
           {!ranking ? (
             <Loader2 className="h-8 w-8 animate-spin" />
           ) : (
@@ -261,6 +307,7 @@ export default function PlayerGame({ player, session: initialSession, onLeave }:
           <h1 className="flex items-center gap-3 text-4xl font-black">
             <Send className="h-9 w-9" /> Réponse envoyée !
           </h1>
+          <ChosenAnswer choiceIndex={myAnswer.choice_index} />
           <p className="flex items-center gap-2 text-xl text-white/85">
             <Loader2 className="h-5 w-5 animate-spin" /> En attente des autres…
           </p>

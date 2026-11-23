@@ -3,16 +3,17 @@ import { Circle, Diamond, Square, Triangle, type LucideIcon } from 'lucide-react
 // Les 4 couleurs/formes des réponses, dans l'ordre des choix (index 0 à 3)
 export interface AnswerStyle {
   label: string
+  shape: string // libellé lisible : « Losange bleu »…
   icon: LucideIcon
   bg: string
   ring: string
 }
 
 export const ANSWER_STYLES: AnswerStyle[] = [
-  { label: 'Rouge', icon: Triangle, bg: 'bg-red-600', ring: 'ring-red-300' },
-  { label: 'Bleu', icon: Diamond, bg: 'bg-blue-600', ring: 'ring-blue-300' },
-  { label: 'Jaune', icon: Circle, bg: 'bg-amber-500', ring: 'ring-amber-200' },
-  { label: 'Vert', icon: Square, bg: 'bg-green-600', ring: 'ring-green-300' },
+  { label: 'Rouge', shape: 'Triangle rouge', icon: Triangle, bg: 'bg-red-600', ring: 'ring-red-300' },
+  { label: 'Bleu', shape: 'Losange bleu', icon: Diamond, bg: 'bg-blue-600', ring: 'ring-blue-300' },
+  { label: 'Jaune', shape: 'Rond jaune', icon: Circle, bg: 'bg-amber-500', ring: 'ring-amber-200' },
+  { label: 'Vert', shape: 'Carré vert', icon: Square, bg: 'bg-green-600', ring: 'ring-green-300' },
 ]
 
 // Choix affichables d'une question : un choix vide ("") garde sa place dans le tableau
