@@ -98,6 +98,18 @@ export default function HostLobby({ session, quizTitle, onExit, onStarted }: Hos
     onStarted(data)
   }
 
+  // Retire un joueur (doublon, pseudo inapproprié…) : il est prévenu sur son écran
+  async function handleKick(player: Player) {
+    if (!window.confirm(`Retirer « ${player.nickname} » de la salle d'attente ?`)) return
+    setError(null)
+    const { error } = await supabase.from('players').delete().eq('id', player.id)
+    if (error) {
+      setError([`Impossible de retirer « ${player.nickname} ».`, ...supabaseErrorDetails(error)])
+      return
+    }
+    setPlayers((ps) => ps.filter((p) => p.id !== player.id))
+  }
+
   async function handleCancel() {
     if (players.length > 0 && !window.confirm('Fermer la partie ? Les joueurs seront déconnectés.')) {
       return
@@ -119,6 +131,8 @@ export default function HostLobby({ session, quizTitle, onExit, onStarted }: Hos
   // Adresse publique des participants (sans #/admin) : encodée dans le QR code
   const joinUrl = participantUrl()
   const joinUrlLabel = joinUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')
+  // Le QR code pré-remplit le PIN chez le participant ; l'adresse affichée reste propre
+  const qrValue = `${joinUrl}?pin=${session.pin}`
 
   return (
     <main className="flex min-h-screen flex-col bg-gradient-to-br from-violet-800 via-purple-700 to-fuchsia-600 text-white">
@@ -139,10 +153,10 @@ export default function HostLobby({ session, quizTitle, onExit, onStarted }: Hos
             </p>
           </div>
           <figure className="flex flex-col items-center gap-2">
-            <div className="rounded-2xl border-4 border-violet-600 bg-white p-3 shadow-lg">
+            <div className="rounded-2xl border-4 border-violet-600 bg-white p-3 shadow-lg" data-qr-value={qrValue}>
               {/* Généré dans le navigateur : fonctionne sans service externe */}
               <QRCodeSVG
-                value={joinUrl}
+                value={qrValue}
                 size={176}
                 level="M"
                 marginSize={0}
@@ -230,9 +244,18 @@ export default function HostLobby({ session, quizTitle, onExit, onStarted }: Hos
             {players.map((p) => (
               <li
                 key={p.id}
-                className={`animate-[pop_0.3s_ease-out] rounded-xl ${chipColor(p.id)} px-5 py-3 text-xl font-extrabold shadow-[0_4px_0_0_rgba(0,0,0,0.25)]`}
+                className={`flex animate-[pop_0.3s_ease-out] items-center gap-3 rounded-xl ${chipColor(p.id)} py-3 pl-5 pr-3 text-xl font-extrabold shadow-[0_4px_0_0_rgba(0,0,0,0.25)]`}
               >
                 {p.nickname}
+                <button
+                  type="button"
+                  onClick={() => void handleKick(p)}
+                  title="Retirer ce joueur de la partie"
+                  aria-label={`Retirer ${p.nickname}`}
+                  className="rounded-full bg-black/20 p-1 text-white/90 transition hover:bg-black/50 hover:text-white"
+                >
+                  <X className="h-4 w-4" strokeWidth={3} />
+                </button>
               </li>
             ))}
           </ul>

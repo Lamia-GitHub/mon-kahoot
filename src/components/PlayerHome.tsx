@@ -6,11 +6,26 @@ import HomeLayout from './HomeLayout'
 
 interface PlayerHomeProps {
   onJoined: (player: Player, session: GameSession) => void
+  notice?: string | null // message affiché en haut (ex. joueur retiré de la partie)
+}
+
+// PIN transmis par le QR code de l'hôte : ?pin=123456
+function pinFromUrl(): string {
+  const pin = new URLSearchParams(window.location.search).get('pin') ?? ''
+  return /^\d{6}$/.test(pin) ? pin : ''
+}
+
+// Retire ?pin= de l'adresse (le PIN d'une partie terminée ne doit pas être resservi)
+function clearPinFromUrl() {
+  const url = new URL(window.location.href)
+  if (!url.searchParams.has('pin')) return
+  url.searchParams.delete('pin')
+  window.history.replaceState(null, '', url.pathname + url.search + url.hash)
 }
 
 // Page publique des participants : uniquement « Rejoindre une partie », aucun accès animateur
-export default function PlayerHome({ onJoined }: PlayerHomeProps) {
-  const [pin, setPin] = useState('')
+export default function PlayerHome({ onJoined, notice }: PlayerHomeProps) {
+  const [pin, setPin] = useState(pinFromUrl)
   const [nickname, setNickname] = useState('')
   const [joinError, setJoinError] = useState<string | null>(null)
   const [joining, setJoining] = useState(false)
@@ -63,6 +78,7 @@ export default function PlayerHome({ onJoined }: PlayerHomeProps) {
         return
       }
 
+      clearPinFromUrl()
       onJoined(player, session)
     } finally {
       setJoining(false)
@@ -71,6 +87,11 @@ export default function PlayerHome({ onJoined }: PlayerHomeProps) {
 
   return (
     <HomeLayout subtitle="Le quiz en temps réel">
+      {notice && (
+        <p role="status" className="w-full rounded-2xl bg-amber-100 px-5 py-3 text-center font-bold text-amber-900 shadow">
+          {notice}
+        </p>
+      )}
       <form onSubmit={(e) => void handleJoin(e)} className="w-full space-y-4 rounded-3xl bg-white p-6 shadow-2xl">
         <h2 className="flex items-center gap-2 text-xl font-extrabold text-gray-800">
           <Gamepad2 className="h-6 w-6 text-violet-600" />
@@ -97,6 +118,7 @@ export default function PlayerHome({ onJoined }: PlayerHomeProps) {
           <input
             maxLength={30}
             placeholder="Ton pseudo"
+            autoFocus={pinValid} // PIN pré-rempli par le QR code : il ne reste que le pseudo
             value={nickname}
             onChange={(e) => {
               setNickname(e.target.value)

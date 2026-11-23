@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { CheckCircle2, DoorOpen, Loader2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { onPageVisible } from '../lib/gameStorage'
 import type { GameSession, Player } from '../types/database'
+
+export const KICKED_MESSAGE = "Tu as été retiré de la salle d'attente par l'animateur."
 
 interface PlayerLobbyProps {
   player: Player
   session: GameSession
-  onLeave: () => void
+  onLeave: (notice?: string) => void
   onStarted: (session: GameSession) => void
 }
 
@@ -14,13 +17,15 @@ export default function PlayerLobby({ player, session, onLeave, onStarted }: Pla
   const [closed, setClosed] = useState(session.status === 'finished')
   const [leaving, setLeaving] = useState(false)
 
-  // Référence vers le dernier callback, pour ne pas se réabonner à chaque rendu
+  // Références vers les derniers callbacks, pour ne pas se réabonner à chaque rendu
   const onStartedRef = useRef(onStarted)
+  const onLeaveRef = useRef(onLeave)
   useEffect(() => {
     onStartedRef.current = onStarted
+    onLeaveRef.current = onLeave
   })
 
-  // Suit en direct le statut de la partie (démarrage / fermeture par l'hôte)
+  // Suit en direct la partie (démarrage / fermeture) et sa propre présence (éjection par l'hôte)
   useEffect(() => {
     let cancelled = false
 
@@ -30,6 +35,21 @@ export default function PlayerLobby({ player, session, onLeave, onStarted }: Pla
       else if (s.status !== 'lobby') onStartedRef.current(s)
     }
 
+    function kicked() {
+      if (!cancelled) onLeaveRef.current(KICKED_MESSAGE)
+    }
+
+    // Vérifie l'état réel (après abonnement, ou au retour sur l'onglet / déverrouillage du téléphone)
+    async function refresh() {
+      const [{ data: s }, { data: me, error: meError }] = await Promise.all([
+        supabase.from('game_sessions').select('*').eq('id', session.id).single(),
+        supabase.from('players').select('id').eq('id', player.id).maybeSingle(),
+      ])
+      if (cancelled) return
+      if (!meError && !me) return kicked()
+      if (s) handle(s)
+    }
+
     const channel = supabase
       .channel(`player-lobby-${session.id}-${crypto.randomUUID()}`)
       .on(
@@ -37,18 +57,26 @@ export default function PlayerLobby({ player, session, onLeave, onStarted }: Pla
         { event: 'UPDATE', schema: 'public', table: 'game_sessions', filter: `id=eq.${session.id}` },
         (payload) => handle(payload.new as GameSession),
       )
-      .subscribe(async (s) => {
-        if (s !== 'SUBSCRIBED' || cancelled) return
-        // Rattrape un changement survenu avant l'abonnement
-        const { data } = await supabase.from('game_sessions').select('*').eq('id', session.id).single()
-        if (data) handle(data)
+      .on(
+        // Les DELETE ne sont pas filtrables côté Supabase : on compare l'id reçu
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'players' },
+        (payload) => {
+          if ((payload.old as Partial<Player>).id === player.id) kicked()
+        },
+      )
+      .subscribe((s) => {
+        if (s === 'SUBSCRIBED' && !cancelled) void refresh()
       })
+
+    const stopVisible = onPageVisible(() => void refresh())
 
     return () => {
       cancelled = true
+      stopVisible()
       void supabase.removeChannel(channel)
     }
-  }, [session.id])
+  }, [session.id, player.id])
 
   async function handleLeave() {
     setLeaving(true)

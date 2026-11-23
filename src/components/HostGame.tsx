@@ -16,22 +16,48 @@ import { supabase } from '../lib/supabase'
 import { supabaseErrorDetails } from '../lib/errors'
 import { ANSWER_STYLES, visibleChoices } from '../lib/answerStyles'
 import { sortByScore } from '../lib/ranking'
+import { hostStorage } from '../lib/gameStorage'
 import type { Answer, GameSession, Player, Question } from '../types/database'
 
 interface HostGameProps {
   session: GameSession
   quizTitle: string
+  resumed?: boolean // partie reprise après un rafraîchissement de la page
   onExit: () => void
 }
 
-export default function HostGame({ session: initialSession, quizTitle, onExit }: HostGameProps) {
+const MAX_OFFSET_MS = 10 * 60 * 1000
+
+// Mémorise l'écart entre l'heure locale de réception et l'heure de début fixée par Supabase
+// (décalage d'horloge PC ↔ serveur + latence), pour recaler le chrono après un rafraîchissement.
+function recordClockOffset(session: GameSession) {
+  if (session.status !== 'question' || !session.question_started_at) return
+  const started = Date.parse(session.question_started_at)
+  if (Number.isNaN(started)) return
+  const offset = Date.now() - started
+  if (Math.abs(offset) <= MAX_OFFSET_MS) hostStorage.setClockOffset(offset)
+}
+
+// Début de la question pour le chrono. Partie reprise : heure de début fixée par Supabase,
+// convertie en heure locale grâce au décalage mémorisé (pour ne pas redonner tout le temps).
+function initialShownAt(session: GameSession, resumed: boolean): number {
+  const now = Date.now()
+  if (!resumed || session.status !== 'question' || !session.question_started_at) return now
+  const started = Date.parse(session.question_started_at)
+  if (Number.isNaN(started)) return now
+  const local = started + (hostStorage.load()?.clockOffsetMs ?? 0)
+  if (local < now - MAX_OFFSET_MS) return now
+  return Math.min(local, now)
+}
+
+export default function HostGame({ session: initialSession, quizTitle, resumed = false, onExit }: HostGameProps) {
   const [session, setSession] = useState(initialSession)
   const [questions, setQuestions] = useState<Question[] | null>(null)
   const [players, setPlayers] = useState<Player[]>([])
   const [answers, setAnswers] = useState<Answer[]>([])
   // Heure locale d'affichage de la question : le chrono ne dépend pas du décalage d'horloge
   // avec le serveur (Supabase fixe sa propre heure de début pour le calcul des points).
-  const [shownAt, setShownAt] = useState(() => Date.now())
+  const [shownAt, setShownAt] = useState(() => initialShownAt(initialSession, resumed))
   const [now, setNow] = useState(() => Date.now())
   const [error, setError] = useState<string[] | null>(null)
   const [busy, setBusy] = useState(false)
@@ -102,6 +128,16 @@ export default function HostGame({ session: initialSession, quizTitle, onExit }:
     }
   }, [session.id])
 
+  // Première question (partie non reprise) : mesure du décalage d'horloge
+  useEffect(() => {
+    if (!resumed) recordClockOffset(initialSession)
+  }, [resumed, initialSession])
+
+  // Partie terminée : un rafraîchissement ramènera à l'espace animateur
+  useEffect(() => {
+    if (session.status === 'finished') hostStorage.clear()
+  }, [session.status])
+
   // Tic-tac du chronomètre
   useEffect(() => {
     if (session.status !== 'question') return
@@ -157,6 +193,7 @@ export default function HostGame({ session: initialSession, quizTitle, onExit }:
     }
     setShownAt(Date.now())
     setNow(Date.now())
+    recordClockOffset(data)
     setSession(data)
   }
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { CheckCircle2, Clock, Home, Loader2, Medal, Send, XCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { onPageVisible, playerStorage } from '../lib/gameStorage'
 import { ANSWER_STYLES, visibleChoices } from '../lib/answerStyles'
 import { ordinal, rankOf, sortByScore } from '../lib/ranking'
 import type { Answer, GameSession, Player, Question } from '../types/database'
@@ -54,16 +55,47 @@ export default function PlayerGame({ player, session: initialSession, onLeave }:
         { event: 'UPDATE', schema: 'public', table: 'game_sessions', filter: `id=eq.${session.id}` },
         (payload) => setSession(payload.new as GameSession),
       )
-      .subscribe(async (s) => {
-        if (s !== 'SUBSCRIBED' || cancelled) return
-        const { data } = await supabase.from('game_sessions').select('*').eq('id', session.id).single()
-        if (!cancelled && data) setSession(data)
+      .subscribe((s) => {
+        if (s === 'SUBSCRIBED' && !cancelled) void refresh()
       })
+
+    // Rattrape l'état réel : après (ré)abonnement et au retour sur l'onglet / déverrouillage du téléphone
+    async function refresh() {
+      const { data } = await supabase.from('game_sessions').select('*').eq('id', session.id).single()
+      if (!cancelled && data) setSession(data)
+    }
+    const stopVisible = onPageVisible(() => void refresh())
+
     return () => {
       cancelled = true
+      stopVisible()
       void supabase.removeChannel(channel)
     }
   }, [session.id])
+
+  // Partie terminée : plus de reconnexion automatique à cette partie
+  useEffect(() => {
+    if (session.status === 'finished') playerStorage.clear()
+  }, [session.status])
+
+  // Question en cours : retrouve une réponse déjà envoyée (ex. après un rafraîchissement de page)
+  const currentQuestionId = question?.id
+  useEffect(() => {
+    if (session.status !== 'question' || !currentQuestionId) return
+    let cancelled = false
+    void supabase
+      .from('answers')
+      .select('*')
+      .eq('player_id', player.id)
+      .eq('question_id', currentQuestionId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && data) setMyAnswers((m) => ({ ...m, [data.question_id]: data }))
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [session.status, currentQuestionId, player.id])
 
   // À l'affichage des résultats / de la fin : récupère le classement et sa propre réponse
   useEffect(() => {

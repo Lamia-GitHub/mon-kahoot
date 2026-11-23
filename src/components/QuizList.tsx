@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, BookOpen, Loader2, Pencil, Play, RefreshCw, Trash2 } from 'lucide-react'
+import { AlertTriangle, BookOpen, Copy, Loader2, Pencil, Play, RefreshCw, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { supabaseErrorDetails } from '../lib/errors'
-import type { GameSession } from '../types/database'
+import type { GameSession, SaveQuizQuestion } from '../types/database'
 
 interface QuizSummary {
   id: string
@@ -66,6 +66,42 @@ export default function QuizList({ onLaunched, onEdit }: QuizListProps) {
       return
     }
     onLaunched(data, quiz.title)
+  }
+
+  // Copie complète du quiz (questions actives, choix, bonnes réponses, chronos, explications)
+  async function handleDuplicate(quiz: QuizSummary) {
+    setBusyId(quiz.id)
+    setError(null)
+    try {
+      const { data: questions, error } = await supabase
+        .from('questions')
+        .select('text, choices, correct_index, time_limit, explanation_text, explanation_image')
+        .eq('quiz_id', quiz.id)
+        .is('archived_at', null) // versions archivées = historique, pas copiées
+        .order('position')
+      if (error) {
+        setError([`Impossible de lire « ${quiz.title} ».`, ...supabaseErrorDetails(error)])
+        return
+      }
+
+      const suffix = ' (copie)'
+      const title = quiz.title.slice(0, 200 - suffix.length) + suffix // titre limité à 200 caractères
+      const payload: SaveQuizQuestion[] = questions.map((q) => ({ id: null, ...q }))
+
+      // Même fonction que l'éditeur : création en une seule transaction
+      const { error: saveError } = await supabase.rpc('save_quiz', {
+        p_quiz_id: null,
+        p_title: title,
+        p_questions: payload,
+      })
+      if (saveError) {
+        setError([`Impossible de dupliquer « ${quiz.title} ».`, ...supabaseErrorDetails(saveError)])
+        return
+      }
+      await load()
+    } finally {
+      setBusyId(null)
+    }
   }
 
   async function handleDelete(quiz: QuizSummary) {
@@ -164,10 +200,21 @@ export default function QuizList({ onLaunched, onEdit }: QuizListProps) {
                     disabled={busyId !== null}
                     title="Modifier le quiz"
                     aria-label={`Modifier ${quiz.title}`}
-                    className="flex items-center gap-1.5 rounded-xl border-2 border-violet-200 px-3 py-1.5 font-bold text-violet-700 hover:border-violet-400 hover:bg-violet-50 disabled:opacity-50"
+                    className="flex items-center gap-1 rounded-xl border-2 border-violet-200 px-2 py-1.5 text-sm font-bold text-violet-700 hover:border-violet-400 hover:bg-violet-50 disabled:opacity-50"
                   >
                     <Pencil className="h-4 w-4" />
                     Modifier
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleDuplicate(quiz)}
+                    disabled={busyId !== null || empty}
+                    title={empty ? 'Ce quiz ne contient aucune question' : 'Dupliquer le quiz'}
+                    aria-label={`Dupliquer ${quiz.title}`}
+                    className="flex items-center gap-1 rounded-xl border-2 border-violet-200 px-2 py-1.5 text-sm font-bold text-violet-700 hover:border-violet-400 hover:bg-violet-50 disabled:opacity-50"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Dupliquer
                   </button>
                   <button
                     type="button"
