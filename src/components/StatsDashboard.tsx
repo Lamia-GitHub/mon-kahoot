@@ -121,7 +121,7 @@ export default function StatsDashboard({ onBack }: StatsDashboardProps) {
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .map((s) => ({
         id: s.id,
-        label: `${formatDate(s.created_at)} · PIN ${s.pin} · ${playerCount.get(s.id) ?? 0} joueur(s)${
+        label: `${formatDate(s.created_at)} · PIN ${s.pin} · ${playerCount.get(s.id) ?? 0} participant(s)${
           quizId ? '' : ` · ${title.get(s.quiz_id) ?? ''}`
         }`,
       }))
@@ -153,7 +153,7 @@ export default function StatsDashboard({ onBack }: StatsDashboardProps) {
             className="flex items-center gap-1 rounded-lg px-3 py-2 font-semibold text-gray-600 hover:bg-gray-100"
           >
             <ArrowLeft className="h-5 w-5" />
-            Espace animateur
+            Espace hôte
           </button>
           <h1 className="flex-1 text-xl font-black text-gray-900">Statistiques &amp; Analyses</h1>
           <button
@@ -238,7 +238,7 @@ export default function StatsDashboard({ onBack }: StatsDashboardProps) {
             {/* Indicateurs clés */}
             <section aria-label="Indicateurs clés" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <StatTile icon={Gamepad2} label="Parties jouées" value={String(stats.sessionsCount)} />
-              <StatTile icon={Users} label="Participants" value={String(stats.participants)} hint="Cumul des joueurs inscrits" />
+              <StatTile icon={Users} label="Participants" value={String(stats.participants)} hint="Cumul des participants inscrits" />
               <StatTile
                 icon={Target}
                 label="Taux de réussite global"
@@ -304,7 +304,7 @@ export default function StatsDashboard({ onBack }: StatsDashboardProps) {
                         <td className="py-3 pr-4">
                           <RateBar
                             rate={q.rate}
-                            detail={`${q.correct} bonne(s) réponse(s) sur ${q.attempts} joueur(s) · ${q.noAnswer} sans réponse`}
+                            detail={`${q.correct} bonne(s) réponse(s) sur ${q.attempts} participant(s) · ${q.noAnswer} sans réponse`}
                           />
                         </td>
                         <td className="py-3 pr-4 text-right tabular-nums text-gray-700">
@@ -317,7 +317,7 @@ export default function StatsDashboard({ onBack }: StatsDashboardProps) {
                             <>
                               {q.topWrong.text}{' '}
                               <span className="text-gray-500">
-                                ({q.topWrong.count} joueur{q.topWrong.count > 1 ? 's' : ''})
+                                ({q.topWrong.count} participant{q.topWrong.count > 1 ? 's' : ''})
                               </span>
                             </>
                           ) : (
@@ -333,7 +333,7 @@ export default function StatsDashboard({ onBack }: StatsDashboardProps) {
 
             {/* Résultats par session et par joueur */}
             <section className="space-y-4">
-              <h2 className="text-lg font-black text-gray-900">Résultats par session et par joueur</h2>
+              <h2 className="text-lg font-black text-gray-900">Résultats par session et par participant</h2>
               {stats.sessions.map((s) => (
                 <article key={s.sessionId} className="overflow-hidden rounded-2xl bg-white shadow">
                   <header className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-gray-100 bg-gray-50 px-5 py-3 text-sm">
@@ -341,7 +341,7 @@ export default function StatsDashboard({ onBack }: StatsDashboardProps) {
                     <span className="text-gray-600">{formatDate(s.date)}</span>
                     <span className="text-gray-600">PIN {s.pin}</span>
                     <span className="text-gray-600">
-                      {s.players.length} joueur{s.players.length > 1 ? 's' : ''} · {s.questionsPlayed} question
+                      {s.players.length} participant{s.players.length > 1 ? 's' : ''} · {s.questionsPlayed} question
                       {s.questionsPlayed > 1 ? 's' : ''} jouée{s.questionsPlayed > 1 ? 's' : ''}
                     </span>
                     {s.questionsPlayed === 0 && s.players.length > 0 && (
@@ -359,7 +359,7 @@ export default function StatsDashboard({ onBack }: StatsDashboardProps) {
                       <thead>
                         <tr className="text-xs uppercase tracking-wide text-gray-500">
                           <th className="px-5 py-2 font-bold">Rang</th>
-                          <th className="py-2 pr-4 font-bold">Joueur</th>
+                          <th className="py-2 pr-4 font-bold">Participant</th>
                           <th className="py-2 pr-4 text-right font-bold">Score</th>
                           <th className="py-2 pr-4 text-right font-bold">Bonnes réponses</th>
                           <th className="py-2 pr-5 font-bold">Taux de réussite</th>
@@ -393,7 +393,7 @@ export default function StatsDashboard({ onBack }: StatsDashboardProps) {
                         {s.players.length === 0 && (
                           <tr>
                             <td colSpan={5} className="px-5 py-3 text-gray-500">
-                              Aucun joueur.
+                              Aucun participant.
                             </td>
                           </tr>
                         )}

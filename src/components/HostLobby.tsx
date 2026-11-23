@@ -67,7 +67,7 @@ export default function HostLobby({ session, quizTitle, onExit, onStarted }: Hos
             .select('*')
             .eq('session_id', session.id)
           if (cancelled) return
-          if (error) setError(['Impossible de charger les joueurs.', ...supabaseErrorDetails(error)])
+          if (error) setError(['Impossible de charger les participants.', ...supabaseErrorDetails(error)])
           else setPlayers((ps) => mergePlayers(ps, data))
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           setRealtime('error')
@@ -111,7 +111,7 @@ export default function HostLobby({ session, quizTitle, onExit, onStarted }: Hos
   }
 
   async function handleCancel() {
-    if (players.length > 0 && !window.confirm('Fermer la partie ? Les joueurs seront déconnectés.')) {
+    if (players.length > 0 && !window.confirm('Fermer la partie ? Les participants seront déconnectés.')) {
       return
     }
     setBusy(true)
@@ -177,7 +177,7 @@ export default function HostLobby({ session, quizTitle, onExit, onStarted }: Hos
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-2 rounded-full bg-black/25 px-4 py-2 text-lg font-extrabold">
               <Users className="h-5 w-5" />
-              {players.length} joueur{players.length > 1 ? 's' : ''}
+              {players.length} participant{players.length > 1 ? 's' : ''}
             </span>
             <span
               className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold ${
@@ -207,7 +207,7 @@ export default function HostLobby({ session, quizTitle, onExit, onStarted }: Hos
               type="button"
               onClick={() => void handleStart()}
               disabled={busy || players.length === 0}
-              title={players.length === 0 ? 'Attends qu’au moins un joueur rejoigne' : undefined}
+              title={players.length === 0 ? 'Attends qu’au moins un participant rejoigne' : undefined}
               className="flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-lg font-black text-violet-700 shadow-[0_5px_0_0_rgba(0,0,0,0.25)] hover:bg-violet-50 active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Play className="h-5 w-5 fill-violet-700" />}
@@ -237,10 +237,10 @@ export default function HostLobby({ session, quizTitle, onExit, onStarted }: Hos
         {players.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 py-12 text-white/80">
             <Loader2 className="h-10 w-10 animate-spin" />
-            <p className="text-xl font-bold">En attente des joueurs…</p>
+            <p className="text-xl font-bold">En attente des participants…</p>
           </div>
         ) : (
-          <ul className="flex flex-wrap justify-center gap-3" aria-label="Joueurs connectés">
+          <ul className="flex flex-wrap justify-center gap-3" aria-label="Participants connectés">
             {players.map((p) => (
               <li
                 key={p.id}
@@ -250,7 +250,7 @@ export default function HostLobby({ session, quizTitle, onExit, onStarted }: Hos
                 <button
                   type="button"
                   onClick={() => void handleKick(p)}
-                  title="Retirer ce joueur de la partie"
+                  title="Retirer ce participant de la partie"
                   aria-label={`Retirer ${p.nickname}`}
                   className="rounded-full bg-black/20 p-1 text-white/90 transition hover:bg-black/50 hover:text-white"
                 >

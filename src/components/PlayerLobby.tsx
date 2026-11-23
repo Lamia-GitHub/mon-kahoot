@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { onPageVisible } from '../lib/gameStorage'
 import type { GameSession, Player } from '../types/database'
 
-export const KICKED_MESSAGE = "Tu as été retiré de la salle d'attente par l'animateur."
+export const KICKED_MESSAGE = "Tu as été retiré de la salle d'attente par l'hôte."
 
 interface PlayerLobbyProps {
   player: Player

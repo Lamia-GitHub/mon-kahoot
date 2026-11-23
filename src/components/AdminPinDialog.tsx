@@ -61,7 +61,7 @@ export default function AdminPinDialog({ onSuccess, onCancel }: AdminPinDialogPr
             <LockKeyhole className="h-7 w-7 text-violet-700" />
           </span>
           <h2 id="admin-pin-title" className="text-xl font-black text-gray-900">
-            Espace animateur
+            Espace hôte
           </h2>
           <p className="text-sm text-gray-600">Entre le code secret pour créer ou lancer un quiz.</p>
         </div>
@@ -73,7 +73,7 @@ export default function AdminPinDialog({ onSuccess, onCancel }: AdminPinDialogPr
               type="password"
               inputMode="numeric"
               autoComplete="off"
-              aria-label="Code animateur"
+              aria-label="Code hôte"
               placeholder="••••"
               value={code}
               onChange={(e) => {
@@ -107,7 +107,7 @@ export default function AdminPinDialog({ onSuccess, onCancel }: AdminPinDialogPr
           </>
         ) : (
           <p role="alert" className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Le code animateur n'est pas configuré. Ajoute <code className="font-bold">VITE_ADMIN_PIN</code> dans{' '}
+            Le code hôte n'est pas configuré. Ajoute <code className="font-bold">VITE_ADMIN_PIN</code> dans{' '}
             <code className="font-bold">.env.local</code> (ou dans les variables de l'hébergeur), puis relance
             l'application.
           </p>

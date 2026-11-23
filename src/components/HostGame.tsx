@@ -293,14 +293,17 @@ export default function HostGame({ session: initialSession, quizTitle, resumed =
         )}
 
         {errorBox}
-        <button
-          type="button"
-          onClick={onExit}
-          className="flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-lg font-black text-violet-700 shadow-[0_5px_0_0_rgba(0,0,0,0.25)] hover:bg-violet-50 active:translate-y-1 active:shadow-none"
-        >
-          <Home className="h-5 w-5" />
-          Retour à l'espace animateur
-        </button>
+        {/* Retour volontairement discret, tout en bas : l'écran est projeté aux participants */}
+        <div className="mt-auto pt-24">
+          <button
+            type="button"
+            onClick={onExit}
+            className="flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-xs text-white/60 transition hover:bg-white/20 hover:text-white"
+          >
+            <Home className="h-3.5 w-3.5" />
+            Retour à l'espace hôte
+          </button>
+        </div>
       </main>
     )
   }

@@ -66,7 +66,7 @@ export default function AdminApp() {
 
   if (!unlocked) {
     return (
-      <HomeLayout subtitle="Espace animateur">
+      <HomeLayout subtitle="Espace hôte">
         {/* Annuler ramène à la page participant */}
         <AdminPinDialog onSuccess={() => setUnlocked(true)} onCancel={goToParticipant} />
       </HomeLayout>
@@ -76,7 +76,7 @@ export default function AdminApp() {
   switch (view.name) {
     case 'restoring':
       return (
-        <HomeLayout subtitle="Espace animateur">
+        <HomeLayout subtitle="Espace hôte">
           <p className="flex items-center gap-2 text-lg font-bold text-white">
             <Loader2 className="h-6 w-6 animate-spin" /> Reprise de la partie en cours…
           </p>

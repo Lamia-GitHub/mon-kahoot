@@ -329,7 +329,7 @@ export function buildCsv(data: StatsData, filter: StatsFilter): string {
     'Quiz',
     'Date de session',
     'PIN',
-    'Joueur',
+    'Participant',
     'Question',
     'Réponse choisie',
     'Statut',

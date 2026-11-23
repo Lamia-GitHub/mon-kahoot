@@ -13,7 +13,7 @@ interface AdminHomeProps {
 // Espace Animateur (#/admin), affiché seulement après la saisie du code secret
 export default function AdminHome({ onCreateQuiz, onOpenStats, onLaunched, onEditQuiz }: AdminHomeProps) {
   return (
-    <HomeLayout subtitle="Espace animateur">
+    <HomeLayout subtitle="Espace hôte">
       <button
         type="button"
         onClick={onCreateQuiz}
